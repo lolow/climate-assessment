@@ -236,7 +236,18 @@ def post_process(
     historical_warming=0.85,
     historical_warming_reference_period="1850-1900",
     historical_warming_evaluation_period="1995-2014",
+    raw_output_only=False,
 ):
+    """
+    Post-process the raw climate model output.
+
+    With ``raw_output_only``, return ``(res, None, None)`` once the raw output
+    is saved (requires ``save_raw_output``), skipping the percentiles,
+    exceedance probabilities and peak warming.
+    """
+    if raw_output_only and not save_raw_output:
+        raise ValueError("raw_output_only requires save_raw_output")
+
     LOGGER.info("Beginning climate post-processing")
     LOGGER.info("Removing unknown units and keeping only World data")
     res = res.filter(unit="unknown", keep=False).filter(region="World")
@@ -308,6 +319,10 @@ def post_process(
 
         # TODO: add test for save raw output with non-CO2 on
         database.save(res)
+
+    if raw_output_only:
+        LOGGER.info("Raw output only: skipping the rest of the post-processing")
+        return res, None, None
 
     if co2_and_non_co2_warming:
         LOGGER.info("Calculating non-CO2 warming")

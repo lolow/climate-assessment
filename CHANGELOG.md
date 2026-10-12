@@ -18,6 +18,10 @@ The changes listed in this file are categorised as follows:
 
 ### Added
 
+* (fork lolow/climate-assessment, branch `raw-only`) Add `--raw-output-only` to
+  `climate_assessment.cli.clim_cli`{.interpreted-text role="func"}: stop once the raw
+  climate output is saved (requires `--save-raw-climate-output`), skipping the
+  percentiles, exceedance probabilities and combined output files
 * ([#68](https://github.com/iiasa/climate-assessment/pull/68)) Update supported
   dependencies and python versions
 * ([#58](https://github.com/iiasa/climate-assessment/pull/58)) Update requirements

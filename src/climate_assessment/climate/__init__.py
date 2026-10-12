@@ -43,6 +43,7 @@ def climate_assessment(
     fair_extra_config=None,
     co2_and_non_co2_warming=False,
     prefix="AR6 climate diagnostics",
+    raw_output_only=False,
 ):
     """
     Run the climate assessment
@@ -103,11 +104,22 @@ def climate_assessment(
     prefix : str
         Prefix for all variable names
 
+    raw_output_only : bool
+        Stop once the raw climate output has been saved (requires
+        ``save_raw_output``): skip the post-processing into percentiles,
+        exceedance probabilities and peak warming, and write no combined
+        output files.
+
     Returns
     -------
-    :class:`pyam.IamDataFrame`
-        :class:`pyam.IamDataFrame` containing climate assessment
+    :class:`pyam.IamDataFrame`, str, None
+        :class:`pyam.IamDataFrame` containing climate assessment; the path of
+        the raw climate output directory if ``raw_output_only``; ``None`` if
+        no scenario could be assessed
     """
+    if raw_output_only and not save_raw_output:
+        raise ValueError("raw_output_only requires save_raw_output")
+
     ## Setup bits and pieces
     datafile_output_name = f"{key_string}_IAMC_climateassessment.csv"
     datafile_output_meta_name = (
@@ -200,7 +212,14 @@ def climate_assessment(
                 outdir=outdir,
                 test_run=test_run,
                 co2_and_non_co2_warming=co2_and_non_co2_warming,
+                raw_output_only=raw_output_only,
             )
+
+            if raw_output_only:
+                LOGGER.info(f"\n\n Batch run finished - batch number {batch_no}.\n\n")
+                batch_dfs = []
+                batch_no += 1
+                continue
 
             LOGGER.info(
                 f"\n\n Batch run finished - now saving batch number {batch_no}."
@@ -218,6 +237,11 @@ def climate_assessment(
             #  batch count
             batch_dfs = []
             batch_no += 1
+
+    if raw_output_only:
+        raw_output_dir = os.path.join(outdir, "raw_climate_output")
+        LOGGER.info("All batches have been run, raw output in %s", raw_output_dir)
+        return raw_output_dir
 
     LOGGER.info("All batches have been run. Let us combine them.")
 
@@ -281,6 +305,7 @@ def run_and_post_process(
     test_run,
     save_raw_output,
     co2_and_non_co2_warming,
+    raw_output_only=False,
 ):
     """
     Run the climate models probabilistically
@@ -319,6 +344,10 @@ def run_and_post_process(
 
     co2_and_non_co2_warming : bool
         Include assessment of CO2 and non-CO2 warming?
+
+    raw_output_only : bool
+        If True, stop after saving the raw output (requires
+        ``save_raw_output``); see :func:`post_process`.
 
     Returns
     -------
@@ -409,6 +438,7 @@ def run_and_post_process(
         historical_warming=historical_warming,
         historical_warming_reference_period=historical_warming_reference_period,
         historical_warming_evaluation_period=historical_warming_evaluation_period,
+        raw_output_only=raw_output_only,
     )
 
 

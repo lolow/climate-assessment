@@ -249,3 +249,84 @@ def test_combined_csv_output(
     assert os.path.isfile(out_csv_fname), (
         "--save-csv-combined-output was set but CSV output not written"
     )
+
+
+def _fair_clim_args(
+    test_data_dir, out_dir, fair_slim_configs_filepath, fair_common_configs_filepath
+):
+    return [
+        os.path.join(test_data_dir, "workflow-fair", "ex2_harmonized_infilled.csv"),
+        out_dir,
+        "--num-cfgs",
+        1,
+        "--test-run",
+        "--model",
+        "fair",
+        "--model-version",
+        "1.6.2",
+        "--probabilistic-file",
+        fair_slim_configs_filepath,
+        "--fair-extra-config",
+        fair_common_configs_filepath,
+        "--scenario-batch-size",
+        4,
+    ]
+
+
+def test_clim_raw_output_only(
+    tmpdir, test_data_dir, fair_slim_configs_filepath, fair_common_configs_filepath
+):
+    out_dir = str(tmpdir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        climate_assessment.cli.clim_cli,
+        [
+            *_fair_clim_args(
+                test_data_dir,
+                out_dir,
+                fair_slim_configs_filepath,
+                fair_common_configs_filepath,
+            ),
+            "--save-raw-climate-output",
+            "--raw-output-only",
+        ],
+    )
+
+    assert result.exit_code == 0, _format_traceback_and_stdout_from_click_result(result)
+    assert "Raw output only: skipping the rest of the post-processing" in result.output
+    assert "Calculating exceedance probability timeseries" not in result.output
+    assert "COMPLETE" in result.output
+
+    raw_files = [
+        f
+        for _, _, files in os.walk(os.path.join(out_dir, "raw_climate_output"))
+        for f in files
+        if f.endswith(".nc")
+    ]
+    assert raw_files
+    assert sorted(f for f in os.listdir(out_dir) if f.endswith((".csv", ".xlsx"))) == []
+
+
+def test_clim_raw_output_only_requires_save_raw_climate_output(
+    tmpdir, test_data_dir, fair_slim_configs_filepath, fair_common_configs_filepath
+):
+    out_dir = str(tmpdir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        climate_assessment.cli.clim_cli,
+        [
+            *_fair_clim_args(
+                test_data_dir,
+                out_dir,
+                fair_slim_configs_filepath,
+                fair_common_configs_filepath,
+            ),
+            "--raw-output-only",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--raw-output-only requires --save-raw-climate-output" in result.output
+    assert os.listdir(out_dir) == []
